@@ -143,6 +143,57 @@ async function mergeImages(imagePath1, imagePath2) {
   }
 }
 
+app.post('/v1/happiness', upload.array('image', 5), async (req, res) => {
+  try {
+    console.log(req.files)
+    console.log(req.body.query)
+
+    const promptPromises = req.files.map(async (val) => {
+      const options = {
+        method: 'POST',
+        url: 'http://localhost:5000/detect',
+        headers: {
+          "Content-Type": "multipart/form-data"
+        },
+        data: {
+          query: `${req.body.query}`,
+          image: fs.createReadStream(`uploads/${val.filename}`)
+        }
+      };
+
+      const resp = await axios.request(options)
+      return {answer: resp.data.answer, filename: val.filename }
+    })
+
+    const detectResult = await Promise.all(promptPromises)
+    const existResult = detectResult.filter((arr) => { return arr.answer.length > 0 } )
+    if(existResult.length == 1) {
+      res.status(200).json({success: true, filename: existResult[0].filename});
+      return
+    }
+
+    if(existResult.length > 1) {
+      let smallestPoint = parseFloat(existResult[0].answer[0].x_max) - parseFloat(existResult[0].answer[0].x_min)
+      let smallestFilename = existResult[0].filename
+      for(let i=0;i<existResult.length;i++) {
+        if(i == 0) continue;
+        const data = existResult[i]
+        const minPoint = parseFloat(data.answer[0].x_max) - parseFloat(data.answer[0].x_min)
+        if(minPoint < smallestPoint) {
+          smallestPoint = minPoint
+          smallestFilename = data.filename
+        }
+      }
+      res.status(200).json({success: true, filename: smallestFilename});
+      return
+    }
+
+    res.status(400).json({success: false, message: 'no picture match your query'});
+  }catch(err) {
+    console.error(err)
+  }
+});
+
 // Start the server
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
