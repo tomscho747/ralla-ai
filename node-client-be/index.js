@@ -156,7 +156,7 @@ app.post('/v1/happiness', upload.array('image', 5), async (req, res) => {
           "Content-Type": "multipart/form-data"
         },
         data: {
-          query: `${req.body.query}`,
+          query: `smile`,
           image: fs.createReadStream(`uploads/${val.filename}`)
         }
       };
@@ -168,23 +168,39 @@ app.post('/v1/happiness', upload.array('image', 5), async (req, res) => {
     const detectResult = await Promise.all(promptPromises)
     const existResult = detectResult.filter((arr) => { return arr.answer.length > 0 } )
     if(existResult.length == 1) {
-      res.status(200).json({success: true, filename: existResult[0].filename});
+      res.status(200).json({success: true, filename: existResult[0].filename, score: 100});
       return
     }
 
     if(existResult.length > 1) {
-      let smallestPoint = parseFloat(existResult[0].answer[0].x_max) - parseFloat(existResult[0].answer[0].x_min)
-      let smallestFilename = existResult[0].filename
-      for(let i=0;i<existResult.length;i++) {
-        if(i == 0) continue;
-        const data = existResult[i]
-        const minPoint = parseFloat(data.answer[0].x_max) - parseFloat(data.answer[0].x_min)
-        if(minPoint < smallestPoint) {
-          smallestPoint = minPoint
-          smallestFilename = data.filename
+      
+      const ratePromises = existResult.map(async (val) => {
+        const options = {
+          method: 'POST',
+          url: 'http://localhost:5000/query',
+          headers: {
+            "Content-Type": "multipart/form-data"
+          },
+          data: {
+            query: `rate the happiness of the visitors!`,
+            image: fs.createReadStream(`uploads/${val.filename}`)
+          }
+        };
+  
+        const resp = await axios.request(options)
+        const score = resp.data.answer.match(pattern)[0]
+        return {answer: resp.data.answer, filename: val.filename, score: score ? score : 0 }
+      })
+
+      const rateResult = await promise.all(ratePromises)
+      let biggest = rateResult[0]
+      for(const val of rateResult) {
+        if(val.score > biggest.score) {
+          biggest = val
         }
       }
-      res.status(200).json({success: true, filename: smallestFilename});
+
+      res.status(200).json({success: true, filename: biggest.filename, score: biggest.score});
       return
     }
 
