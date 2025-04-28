@@ -8,6 +8,7 @@ import sharp from 'sharp';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const pattern = new RegExp("\\d+");
 
 app.use(express.json())
 
