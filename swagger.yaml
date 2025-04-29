@@ -1,0 +1,140 @@
+openapi: 3.0.0
+info:
+  title: Image Processing API
+  description: API for processing images, generating QR codes, and analyzing happiness levels in images.
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+paths:
+  /v1/best-shots:
+    post:
+      summary: Find the best matching image based on a query.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                query:
+                  type: string
+      responses:
+        '200':
+          description: Successfully found the best matching image.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  filename:
+                    type: string
+        '400':
+          description: No picture matches the query.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  /v1/generate-qr:
+    post:
+      summary: Generate a QR code from the provided data.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: object
+      responses:
+        '200':
+          description: Successfully generated QR code.
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+
+  /v1/before-after:
+    post:
+      summary: Compare two images and find differences.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '200':
+          description: Successfully found differences between the images.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  /v1/happiness:
+    post:
+      summary: Evaluate happiness levels in the provided images.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                query:
+                  type: string
+      responses:
+        '200':
+          description: Successfully evaluated happiness levels.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  filename:
+                    type: string
+                  score:
+                    type: integer
+        '400':
+          description: No picture matches the query.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
