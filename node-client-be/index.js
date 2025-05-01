@@ -211,6 +211,51 @@ app.post('/v1/happiness', upload.array('image', 5), async (req, res) => {
   }
 });
 
+app.post('/v2/happiness', upload.array('image', 5), async (req, res) => {
+  try {
+    console.log(req.files)
+    console.log(req.body.query)
+
+    const promptPromises = req.files.map(async (val) => {
+      const options = {
+        method: 'POST',
+        url: 'http://localhost:5000/detect',
+        headers: {
+          "Content-Type": "multipart/form-data"
+        },
+        data: {
+          query: `smile`,
+          image: fs.createReadStream(`uploads/${val.filename}`)
+        }
+      };
+
+      const resp = await axios.request(options)
+      return {answer: resp.data.answer, filename: val.filename }
+    })
+
+    const detectResult = await Promise.all(promptPromises)
+    const existResult = detectResult.filter((arr) => { return arr.answer.length > 0 } )
+    if(existResult.length == 1) {
+      res.status(200).json({success: true, result: [{filename: existResult[0].filename, score: existResult[0].answer.length * 10}]});
+      return
+    }
+
+    if(existResult.length > 1) {
+      
+      const rateResult = existResult.map((val) => {
+        return {filename: val.filename, score : val.answer.length * 10 }
+      })
+
+      res.status(200).json({success: true, result: rateResult});
+      return
+    }
+
+    res.status(400).json({success: false, message: 'no picture match your query'});
+  }catch(err) {
+    console.error(err)
+  }
+});
+
 // Start the server
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
