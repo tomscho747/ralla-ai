@@ -1,61 +1,65 @@
-🧠 FastAPI Image+Text AI Inference Server
-This FastAPI application serves a batch-based AI inference endpoint that supports multi-modal inputs (text + images), using the Moondream2 model from Hugging Face.
+```markdown
+# 🧠 FastAPI Image+Text AI Inference Server
 
-✨ Features
-Accepts user prompts with optional image URLs.
+This FastAPI application serves a batch-based AI inference endpoint that supports multi-modal inputs (text + images), using the [Moondream2 model](https://huggingface.co/vikhyatk/moondream2) from Hugging Face.
 
-Batches incoming requests for efficient GPU usage.
+## ✨ Features
 
-Uses Hugging Face Transformers (AutoTokenizer, AutoModelForCausalLM).
+- Accepts user prompts with optional image URLs.
+- Batches incoming requests for efficient GPU usage.
+- Uses Hugging Face Transformers (`AutoTokenizer`, `AutoModelForCausalLM`).
+- Automatically fetches and decodes remote images.
+- Asynchronously processes incoming requests via background threading and asyncio.
 
-Automatically fetches and decodes remote images.
+---
 
-Asynchronously processes incoming requests via background threading and asyncio.
+## 📦 Requirements
 
-📦 Requirements
-Python 3.8+
-
-PyTorch (with GPU support)
-
-FastAPI
-
-httpx
-
-transformers
-
-Pillow
+- Python 3.8+
+- PyTorch (with GPU support)
+- FastAPI
+- httpx
+- transformers
+- Pillow
 
 Install dependencies:
 
-bash
-Copy
-Edit
+```bash
 pip install fastapi[all] transformers torch httpx pillow
-⚙️ Environment Variables
-Variable	Description	Default
-BATCH_SIZE	Number of requests to process in a single batch	5
-BATCH_TIMEOUT	Max wait time (in seconds) before batch is processed	1.0
-MODEL_ID	Hugging Face model ID	vikhyatk/moondream2
-REVISION	Model revision to pull	2024-04-02
-HF_HUB_ENABLE_HF_TRANSFER	Hugging Face setting for efficient loading	1
+```
 
-🧠 Model
-Model ID: vikhyatk/moondream2
+---
 
-Capability: Multi-modal (Text + Image) chat-style model
+## ⚙️ Environment Variables
 
-Tokenizer: Loaded from same Hugging Face repo
+| Variable            | Description                                     | Default              |
+|---------------------|-------------------------------------------------|----------------------|
+| `BATCH_SIZE`         | Number of requests to process in a single batch| `5`                  |
+| `BATCH_TIMEOUT`      | Max wait time (in seconds) before batch is processed | `1.0`            |
+| `MODEL_ID`           | Hugging Face model ID                         | `vikhyatk/moondream2`|
+| `REVISION`           | Model revision to pull                         | `2024-04-02`         |
+| `HF_HUB_ENABLE_HF_TRANSFER` | Hugging Face setting for efficient loading | `1`              |
 
-Device: CUDA (GPU required)
+---
 
-📥 API Endpoint
-POST /chat/completions
+## 🧠 Model
+
+- **Model ID**: `vikhyatk/moondream2`
+- **Capability**: Multi-modal (Text + Image) chat-style model
+- **Tokenizer**: Loaded from same Hugging Face repo
+- **Device**: CUDA (GPU required)
+
+---
+
+## 📥 API Endpoint
+
+### `POST /chat/completions`
+
 Handles a chat completion request with text and optional images.
 
-🔤 Request Body
-json
-Copy
-Edit
+#### 🔤 Request Body
+
+```json
 {
   "messages": [
     {
@@ -67,14 +71,14 @@ Edit
     }
   ]
 }
-role: Currently supports only "user".
+```
 
-content: A list of items. Can be text or image_url.
+- `role`: Currently supports only `"user"`.
+- `content`: A list of items. Can be `text` or `image_url`.
 
-✅ Response
-json
-Copy
-Edit
+#### ✅ Response
+
+```json
 {
   "choices": [
     {
@@ -82,39 +86,40 @@ Edit
     }
   ]
 }
-🧵 Internal Architecture
-Startup Phase: Loads model and tokenizer on GPU and starts a background processing thread.
+```
 
-Queue-Based Processing:
+---
 
-Incoming requests are queued (Queue).
+## 🧵 Internal Architecture
 
-Background thread collects requests and forms a batch.
+1. **Startup Phase**: Loads model and tokenizer on GPU and starts a background processing thread.
+2. **Queue-Based Processing**:
+   - Incoming requests are queued (`Queue`).
+   - Background thread collects requests and forms a batch.
+   - Uses `asyncio.run()` to asynchronously fetch images and pass data to the model.
+3. **Model Inference**:
+   - Fetches remote images using `httpx`.
+   - Passes prompts and images to `moondream.batch_answer(...)`.
+4. **Response Mapping**:
+   - Each request has a unique ID and is matched to its response via a global map.
 
-Uses asyncio.run() to asynchronously fetch images and pass data to the model.
+---
 
-Model Inference:
+## 🛠️ Development
 
-Fetches remote images using httpx.
+### Run locally
 
-Passes prompts and images to moondream.batch_answer(...).
-
-Response Mapping:
-
-Each request has a unique ID and is matched to its response via a global map.
-
-🛠️ Development
-Run locally
-bash
-Copy
-Edit
+```bash
 uvicorn app:app --reload
-Replace app:app with the actual filename if different.
+```
 
-🧪 Example Test
-bash
-Copy
-Edit
+Replace `app:app` with the actual filename if different.
+
+---
+
+## 🧪 Example Test
+
+```bash
 curl -X POST http://localhost:8000/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -128,12 +133,15 @@ curl -X POST http://localhost:8000/chat/completions \
           }
         ]
       }'
-🧹 TODO / Improvements
-Add support for multiple user/assistant message turns
+```
 
-Handle image fetch failures more gracefully
+---
 
-Extend batching to support more complex input aggregation
+## 🧹 TODO / Improvements
 
-Add support for max_tokens, temperature, etc.
+- Add support for multiple user/assistant message turns
+- Handle image fetch failures more gracefully
+- Extend batching to support more complex input aggregation
+- Add support for `max_tokens`, `temperature`, etc.
 
+---
