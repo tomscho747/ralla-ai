@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Prompt Tester</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    h2 { margin-top: 20px; }
+    pre { background: #f4f4f4; padding: 10px; border-radius: 5px; white-space: pre-wrap; }
+    .box { border: 1px solid #ccc; padding: 15px; margin: 10px 0; border-radius: 5px; }
+    .row { display: flex; gap: 10px; margin-bottom: 10px; }
+    .row input { flex: 1; padding: 8px; }
+    textarea { width: 100%; padding: 8px; }
+    button { padding: 8px 12px; cursor: pointer; }
+    .badge { display: inline-block; padding: 3px 7px; background: #eee; margin: 2px; border-radius: 4px; font-size: 0.9em; }
+  </style>
+</head>
+<body>
+  <h1>Prompt Tester</h1>
+
+  <div class="box">
+    <h2>Saved Prompts</h2>
+    <ul id="prompts"></ul>
+  </div>
+
+  <div class="box">
+    <h2>Available Data Placeholders</h2>
+    <div id="availableData"></div>
+  </div>
+
+  <div class="box">
+    <h2>Test Prompt</h2>
+    <div class="row">
+      <input type="text" id="activityId" placeholder="Activity ID">
+      <input type="text" id="profileId" placeholder="Profile ID">
+    </div>
+    <textarea id="prompt" rows="6" placeholder="Enter your prompt here..."></textarea>
+    <br /><br />
+    <button onclick="runTest()">Run Test</button>
+  </div>
+
+  <div class="box" id="resultBox" style="display:none;">
+    <h2>Result</h2>
+    <p><strong>Final Prompt:</strong></p>
+    <pre id="finalPrompt"></pre>
+    <p><strong>AI Response:</strong></p>
+    <pre id="aiResponse"></pre>
+    <p><strong>Processing Time:</strong> <span id="processingTime"></span></p>
+    <p><strong>Response Compatibility:</strong></p>
+    <pre id="compatibility"></pre>
+  </div>
+
+  <script>
+    // Fetch saved prompts
+    fetch("https://api-dev.ralla.io/api/v1/prompt/list")
+      .then(res => res.json())
+      .then(data => {
+        const list = document.getElementById("prompts");
+        (data.data || []).forEach(p => {
+          const li = document.createElement("li");
+          li.innerHTML = `<strong>${p.element_code || p.id}:</strong> <h4>${p.profile_type}</h4> <pre>${p.prompts}</pre> <pre>Data used: ${p.data_used}</pre>`;
+          list.appendChild(li);
+        });
+      });
+
+    // Fetch available placeholders
+    fetch("https://api-dev.ralla.io/api/v1/prompt")
+      .then(res => res.json())
+      .then(data => {
+        const container = document.getElementById("availableData");
+        (data.data || []).forEach(d => {
+          const span = document.createElement("span");
+          span.className = "badge";
+          span.textContent = d;
+          container.appendChild(span);
+        });
+      });
+
+    // Run test
+    function runTest() {
+      const activityId = document.getElementById("activityId").value;
+      const profileId = document.getElementById("profileId").value;
+      const prompt = document.getElementById("prompt").value;
+
+      fetch("https://api-dev.ralla.io/api/v1/prompt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ activity_id: activityId, profile_id: profileId, prompt })
+      })
+        .then(res => res.json())
+        .then(data => {
+          const result = data.data;
+          if (!result) return;
+
+          document.getElementById("finalPrompt").textContent = result.final_prompt;
+          document.getElementById("aiResponse").textContent = JSON.stringify(result.ai_response, null, 2);
+          document.getElementById("processingTime").textContent = result.ai_processing_time;
+          document.getElementById("compatibility").textContent = JSON.stringify(result.ai_response_compability, null, 2);
+
+          document.getElementById("resultBox").style.display = "block";
+        })
+        .catch(err => {
+          alert("Error running test: " + err.message);
+        });
+    }
+  </script>
+</body>
+</html>
